@@ -34,6 +34,19 @@ spk = None
 debug = False
 
 cuda = {}
+
+# store pth and config
+assets_path="/root/autodl-tmp/pth/"
+file_list=os.listdir(assets_path)
+# add path prefix
+file_list=list(assets_path+i for i in file_list)
+
+def is_pth(n):
+    return n.endswith(".pth")
+
+def is_config(n):
+    return n.endswith(".json")
+
 if torch.cuda.is_available():
     for i in range(torch.cuda.device_count()):
         device_name = torch.cuda.get_device_properties(i).name
@@ -78,7 +91,7 @@ def modelAnalysis(model_path,config_path,cluster_model_path,device,enhance):
     global model
     try:
         device = cuda[device] if "CUDA" in device else device
-        model = Svc(model_path.name, config_path.name, device=device if device!="Auto" else None, cluster_model_path = cluster_model_path.name if cluster_model_path != None else "",nsf_hifigan_enhance=enhance)
+        model = Svc(model_path, config_path, device=device if device!="Auto" else None, cluster_model_path = cluster_model_path.name if cluster_model_path != None else "",nsf_hifigan_enhance=enhance)
         spks = list(model.spk2id.keys())
         device_name = torch.cuda.get_device_properties(model.dev).name if "cuda" in str(model.dev) else str(model.dev)
         msg = f"成功加载模型到设备{device_name}上\n"
@@ -193,6 +206,7 @@ def debug_change():
     global debug
     debug = debug_button.value
 
+
 with gr.Blocks(
     theme=gr.themes.Base(
         primary_hue = gr.themes.colors.green,
@@ -210,8 +224,10 @@ with gr.Blocks(
                     gr.Markdown(value="""
                         <font size=2> 模型设置</font>
                         """)
-                    model_path = gr.File(label="选择模型文件")
-                    config_path = gr.File(label="选择配置文件")
+                    #model_path = gr.File(label="选择模型文件")
+                    model_path = gr.Dropdown(label="选择模型文件", choices=list(filter(is_pth,file_list)))
+                    #config_path = gr.File(label="选择配置文件")
+                    config_path = gr.Dropdown(label="选择配置文件", choices=list(filter(is_config,file_list)))
                     cluster_model_path = gr.File(label="选择聚类模型文件（没有可以不选）")
                     device = gr.Dropdown(label="推理设备，默认为自动选择CPU和GPU", choices=["Auto",*cuda.keys(),"CPU"], value="Auto")
                     enhance = gr.Checkbox(label="是否使用NSF_HIFIGAN增强,该选项对部分训练集少的模型有一定的音质增强效果，但是对训练好的模型有反面效果，默认关闭", value=False)
